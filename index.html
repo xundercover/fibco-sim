@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FIBCO — Fallsimulation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Georgia&family=JetBrains+Mono:wght@400;600;700&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#131f36;
+    --navy-2:#22314f;
+    --gold:#b3892f;
+    --gold-light:#e4c976;
+    --paper:#fbfaf6;
+    --paper-2:#f3f1e9;
+    --ink:#1c2434;
+    --ink-soft:#5a5f6b;
+    --red:#a4362a;
+    --red-bg:#f7e9e7;
+    --green:#2e6b46;
+    --green-bg:#e9f3ec;
+    --line:#d8d3c4;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 20% -10%, rgba(179,137,47,0.08), transparent 45%),
+      var(--paper-2);
+    font-family: Georgia, 'Times New Roman', serif;
+    color:var(--ink);
+    min-height:100vh;
+    padding:28px 16px 60px;
+  }
+  .sheet{
+    max-width:1180px;
+    margin:0 auto;
+    background:var(--paper);
+    border:1px solid var(--line);
+    box-shadow:0 18px 50px -20px rgba(19,31,54,0.35);
+    position:relative;
+    overflow:hidden;
+  }
+  /* watermark */
+  .sheet::before{
+    content:"CORRUPTION OFFICE";
+    position:absolute;
+    top:52%; left:50%;
+    transform:translate(-50%,-50%) rotate(-18deg);
+    font-family:'JetBrains Mono', monospace;
+    font-weight:700;
+    font-size:92px;
+    letter-spacing:10px;
+    color:var(--navy);
+    opacity:0.035;
+    white-space:nowrap;
+    pointer-events:none;
+    z-index:0;
+  }
+  .sheet > *{position:relative; z-index:1;}
+
+  /* ===== Header / Letterhead ===== */
+  header{
+    padding:30px 40px 22px;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:24px;
+    border-bottom:2px solid var(--navy);
+    flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:center; gap:18px;}
+  .badge{
+    width:64px; height:64px; border-radius:50%;
+    background:
+      radial-gradient(circle at 35% 30%, var(--gold-light), var(--gold) 55%, #8a6a20 100%);
+    display:flex; align-items:center; justify-content:center;
+    position:relative;
+    box-shadow: inset 0 0 0 3px var(--navy), 0 2px 6px rgba(0,0,0,0.25);
+    flex:none;
+  }
+  .badge span{
+    font-family:'JetBrains Mono', monospace;
+    font-weight:700;
+    color:var(--navy);
+    font-size:19px;
+    letter-spacing:1px;
+  }
+  .brand-text .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:3px;
+    color:var(--gold);
+    font-weight:700;
+    margin:0 0 4px;
+  }
+  .brand-text h1{
+    margin:0; font-size:23px; color:var(--navy); letter-spacing:0.3px;
+  }
+  .brand-text p{margin:2px 0 0; font-size:14px; color:var(--ink-soft); font-style:italic;}
+  .doj{text-align:right; font-size:13px; color:var(--ink-soft); line-height:1.5;}
+  .doj strong{display:block; color:var(--navy); font-size:15px; font-weight:700;}
+
+  /* ===== Toolbar ===== */
+  .toolbar{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:14px; flex-wrap:wrap;
+    padding:16px 40px;
+    background:var(--navy);
+  }
+  .toolbar .status{
+    color:#d9dde6; font-size:13px; font-family:'JetBrains Mono', monospace;
+    letter-spacing:0.5px;
+  }
+  .toolbar .status b{color:var(--gold-light);}
+  .toolbar .actions{display:flex; gap:10px; flex-wrap:wrap;}
+  button{font-family:Georgia, serif; cursor:pointer;}
+  .btn{
+    border:1px solid var(--gold);
+    background:transparent;
+    color:var(--gold-light);
+    padding:9px 16px;
+    font-size:13px;
+    letter-spacing:0.5px;
+    border-radius:3px;
+    transition:background .15s ease, color .15s ease;
+  }
+  .btn:hover{background:rgba(228,201,118,0.14);}
+  .btn:focus-visible, select:focus-visible, input:focus-visible{
+    outline:2px solid var(--gold-light); outline-offset:2px;
+  }
+
+  /* ===== Main grid ===== */
+  main{
+    display:grid;
+    grid-template-columns:1fr 1.15fr;
+    gap:0;
+  }
+  @media (max-width:860px){
+    main{grid-template-columns:1fr;}
+    .col-left{border-right:none !important; border-bottom:1px solid var(--line);}
+  }
+  .col-left{
+    padding:32px 36px 36px;
+    border-right:1px solid var(--line);
+  }
+  .col-right{padding:32px 36px 40px;}
+
+  .doc-title{
+    display:flex; justify-content:space-between; align-items:baseline;
+    border-bottom:1px solid var(--navy); padding-bottom:10px; margin-bottom:18px;
+    flex-wrap:wrap; gap:6px;
+  }
+  .doc-title h2{margin:0; font-size:16px; color:var(--navy); letter-spacing:0.3px;}
+  .doc-title .aktz{
+    font-family:'JetBrains Mono', monospace; font-size:12.5px; color:var(--ink-soft);
+    background:var(--paper-2); padding:3px 8px; border-radius:3px; border:1px solid var(--line);
+  }
+
+  .case-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; letter-spacing:2px; color:var(--gold); font-weight:700;
+    margin-bottom:4px;
+  }
+  .case-title{font-size:19px; color:var(--navy); margin:0 0 16px; font-weight:700;}
+
+  .field-row{display:flex; gap:22px; margin-bottom:16px; font-size:13px; color:var(--ink-soft); flex-wrap:wrap;}
+  .field-row div b{display:block; color:var(--navy); font-size:12px; font-family:'JetBrains Mono',monospace; letter-spacing:0.5px; margin-bottom:2px;}
+
+  .tathergang{
+    background:var(--paper-2);
+    border-left:3px solid var(--gold);
+    padding:16px 18px;
+    font-size:15px;
+    line-height:1.65;
+    color:var(--ink);
+  }
+  .tathergang h3{
+    margin:0 0 8px; font-size:12px; letter-spacing:2px; color:var(--navy);
+    font-family:'JetBrains Mono', monospace; font-weight:700;
+  }
+
+  .hint{
+    margin-top:18px; font-size:12.5px; color:var(--ink-soft); line-height:1.6;
+    border-top:1px dashed var(--line); padding-top:14px;
+  }
+  .hint code{
+    font-family:'JetBrains Mono', monospace; background:var(--paper-2); padding:1px 5px; border-radius:2px;
+  }
+
+  /* ===== Form (right) ===== */
+  table.charges{width:100%; border-collapse:collapse; margin-bottom:10px;}
+  table.charges thead th{
+    text-align:left; font-size:11px; letter-spacing:1.5px; color:var(--navy);
+    font-family:'JetBrains Mono', monospace; font-weight:700;
+    border-bottom:2px solid var(--navy); padding:0 8px 8px 0;
+  }
+  table.charges td{padding:6px 8px 6px 0; vertical-align:top;}
+  table.charges tr td:first-child{width:34%;}
+  table.charges tr td:nth-child(2){width:20%;}
+  select, input[type=text]{
+    width:100%; font-family:Georgia, serif; font-size:14px;
+    padding:7px 8px; border:1px solid var(--line); border-radius:3px;
+    background:#fff; color:var(--ink);
+  }
+  input.para-input{font-family:'JetBrains Mono', monospace; font-size:13.5px;}
+  .row-remove{
+    background:none; border:none; color:var(--red); font-size:18px; line-height:1;
+    padding:6px 4px; border-radius:3px;
+  }
+  .row-remove:hover{background:var(--red-bg);}
+
+  .add-row{
+    display:inline-flex; align-items:center; gap:6px;
+    background:none; border:1px dashed var(--navy-2); color:var(--navy-2);
+    font-size:13px; padding:8px 14px; border-radius:4px; margin:6px 0 22px;
+  }
+  .add-row:hover{background:var(--paper-2);}
+
+  .submit-wrap{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:6px;}
+  .btn-submit{
+    background:var(--navy); color:var(--gold-light);
+    border:2px solid var(--navy); padding:13px 26px;
+    font-size:13.5px; letter-spacing:2px; font-weight:700; border-radius:3px;
+    text-transform:uppercase;
+  }
+  .btn-submit:hover{background:var(--navy-2);}
+  .btn-ghost{
+    background:none; border:none; color:var(--ink-soft); font-size:13px;
+    text-decoration:underline; padding:6px 2px;
+  }
+
+  /* ===== Verdict / results ===== */
+  .verdict-zone{
+    margin-top:26px; padding-top:22px; border-top:1px solid var(--line);
+    display:none;
+  }
+  .verdict-zone.show{display:block;}
+  .stamp-row{display:flex; align-items:center; gap:20px; margin-bottom:18px; flex-wrap:wrap;}
+  .stamp{
+    font-family:'Caveat', cursive;
+    font-size:30px; font-weight:700;
+    border:4px solid currentColor;
+    border-radius:10px;
+    padding:6px 18px 10px;
+    display:inline-block;
+    transform:rotate(-7deg) scale(0.4);
+    opacity:0;
+    animation: stampIn .45s cubic-bezier(.2,1.4,.4,1) forwards;
+  }
+  @keyframes stampIn{
+    0%{opacity:0; transform:rotate(-7deg) scale(2.6);}
+    60%{opacity:1;}
+    100%{opacity:0.92; transform:rotate(-7deg) scale(1);}
+  }
+  .stamp.pass{color:var(--green);}
+  .stamp.fail{color:var(--red);}
+  .score-line{font-family:'JetBrains Mono', monospace; font-size:13.5px; color:var(--navy);}
+  .score-line b{font-size:16px;}
+
+  .breakdown{display:flex; flex-direction:column; gap:8px; margin-bottom:16px;}
+  .item{
+    display:flex; gap:10px; align-items:flex-start;
+    padding:10px 12px; border-radius:4px; font-size:13.5px; line-height:1.5;
+  }
+  .item.ok{background:var(--green-bg); color:#1f4a30;}
+  .item.miss{background:var(--red-bg); color:#7a271d;}
+  .item.extra{background:#f4f1e2; color:#7a6420; border:1px dashed #cbb972;}
+  .item .mark{font-family:'JetBrains Mono', monospace; font-weight:700; flex:none; width:18px;}
+  .item .code{font-family:'JetBrains Mono', monospace; font-weight:700;}
+
+  .review-box{
+    background:var(--paper-2); border:1px solid var(--line); border-radius:4px;
+    padding:14px 16px; font-size:13px; color:var(--ink-soft); line-height:1.6;
+  }
+  .review-box b{color:var(--navy);}
+
+  footer{
+    padding:16px 40px 26px; font-size:11.5px; color:var(--ink-soft);
+    border-top:1px solid var(--line); text-align:center; letter-spacing:0.3px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .stamp{animation:none; opacity:0.92; transform:rotate(-7deg) scale(1);}
+  }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+  <header>
+    <div class="brand">
+      <div class="badge"><span>FIB</span></div>
+      <div class="brand-text">
+        <p class="eyebrow">FEDERAL INVESTIGATION BUREAU</p>
+        <h1>Corruption Office</h1>
+        <p>Ausbildungssimulation — Anklagepunkte prüfen</p>
+      </div>
+    </div>
+    <div class="doj">
+      <strong>Department of Justice</strong>
+      Federal Investigation Bureau<br>
+      <span style="font-style:italic;">Trainingsumgebung, keine echte Akte</span>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="status">FALL <b id="caseIndex">1</b> / <b id="caseTotal">3</b> &nbsp;·&nbsp; SCORE (SESSION): <b id="sessionScore">0 / 0</b></div>
+    <div class="actions">
+      <button class="btn" id="btnPrev">‹ Vorheriger Fall</button>
+      <button class="btn" id="btnRandom">🔀 Zufälliger Fall</button>
+      <button class="btn" id="btnNext">Nächster Fall ›</button>
+    </div>
+  </div>
+
+  <main>
+    <section class="col-left">
+      <div class="doc-title">
+        <h2>Fallakte — Eingang</h2>
+        <span class="aktz" id="aktzPreview">FIB-CO-EA-XX-XXX</span>
+      </div>
+
+      <div class="case-label" id="caseLabel">FALL 1</div>
+      <h3 class="case-title" id="caseTitle">—</h3>
+
+      <div class="field-row">
+        <div><b>Eingang am</b><span id="caseDate">—</span></div>
+        <div><b>Quelle</b><span id="caseSource">Interne Meldung</span></div>
+      </div>
+
+      <div class="tathergang">
+        <h3>Tathergang</h3>
+        <p id="caseText">—</p>
+      </div>
+
+      <div class="hint">
+        Lies den Tathergang genau. Trage rechts alle <code>Gesetzbuch | Paragraph | Gesetz</code>-Kombinationen ein,
+        die aus deiner Sicht als Anklagepunkte in Frage kommen — inklusive der drei Grundtatbestände, die laut
+        Ausbildungshandbuch bei jeder Dienstpflichtverletzung mit anzuklagen sind.
+      </div>
+    </section>
+
+    <section class="col-right">
+      <div class="doc-title">
+        <h2>Anklage — deine Eintragung</h2>
+      </div>
+
+      <table class="charges">
+        <thead>
+          <tr><th>Gesetzbuch</th><th>Paragraph</th><th>Gesetz / Bezeichnung</th><th></th></tr>
+        </thead>
+        <tbody id="rowsBody"></tbody>
+      </table>
+      <button class="add-row" id="btnAddRow">＋ Zeile hinzufügen</button>
+
+      <div class="submit-wrap">
+        <button class="btn-submit" id="btnSubmit">Akte einreichen</button>
+        <button class="btn-ghost" id="btnReveal">Ich komme nicht weiter — Musterlösung zeigen</button>
+      </div>
+
+      <div class="verdict-zone" id="verdictZone">
+        <div class="stamp-row">
+          <span class="stamp" id="stampEl">—</span>
+          <span class="score-line">Anklagepunkte korrekt: <b id="scoreLine">0 / 0</b></span>
+        </div>
+        <div class="breakdown" id="breakdown"></div>
+        <div class="review-box" id="reviewBox"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>FIBCO Ausbildungssystem · Fallsimulation dient ausschließlich zu Übungszwecken · Fälle sind fiktiv</footer>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// FALL-DATENBANK
+// Neue Fälle können hier einfach als weiteres Objekt in CASES ergänzt werden.
+// violations: die vollständige, korrekte Liste aller Anklagepunkte (inkl. der
+// drei Grundtatbestände StGB §4 / BDG §2 / BDG §12, sofern einschlägig).
+// ---------------------------------------------------------------------------
+const CASES = [
+  {
+    title: "Fehlende Bodycam",
+    date: "02.08.2026",
+    source: "Bodycam-Anfrage FIB-CO-BA-…",
+    text: "Im Rahmen eines Verfahrens seitens des Corruption Offices wurde der beschuldigte Beamte zur Vorlage der Bodycam-Aufzeichnung eines Einsatzes aufgefordert. Die Anforderung erfolgte zur Beweissicherung und zur Überprüfung der Rechtmäßigkeit der durchgeführten polizeilichen Maßnahmen. Der beschuldigte Beamte konnte die angeforderte Bodycam-Aufzeichnung nicht vorlegen. Eine vollständige und verwertbare Einsatzdokumentation stand dem Corruption Office somit nicht zur Verfügung. Aufgrund der fehlenden Bodycam-Aufzeichnung war eine lückenlose Rekonstruktion des Einsatzgeschehens sowie die Überprüfung der Rechtmäßigkeit des polizeilichen Handelns nicht möglich.",
+    violations: [
+      {code:"StGB", para:"2.3", law:"Behinderung von Ermittlungsverfahren"},
+      {code:"StGB", para:"4",   law:"Dienstvergehen"},
+      {code:"BDG",  para:"2",   law:"Pflichten der Beamten"},
+      {code:"BDG",  para:"12",  law:"Eid"},
+      {code:"BDG",  para:"15",  law:"Tragen einer Bodycam"},
+    ]
+  },
+  {
+    title: "Kaution ausgestellt, obwohl laut SALI nicht erlaubt",
+    date: "03.08.2026",
+    source: "Meldung Anwaltschaft",
+    text: "Der beschuldigte Beamte nahm einen Tatverdächtigen im Rahmen einer polizeilichen Maßnahme fest. Im Anschluss an die Festnahme stellte er dem Tatverdächtigen eine Kaution aus. Nach den geltenden Vorgaben des SALI ist für den zugrunde liegenden Tatvorwurf jedoch keine Kaution vorgesehen. Die Ausstellung der Kaution erfolgte daher entgegen der bestehenden Richtlinien. Durch die fehlerhafte Anwendung der Vorgaben wurde das Verfahren nicht entsprechend der geltenden Bestimmungen durchgeführt.",
+    violations: [
+      {code:"StGB", para:"3.18", law:"Amtsmissbrauch"},
+      {code:"StGB", para:"4",    law:"Dienstvergehen"},
+      {code:"BDG",  para:"2",    law:"Pflichten der Beamten"},
+      {code:"BDG",  para:"12",   law:"Eid"},
+      {code:"StPO", para:"6",    law:"Kaution"},
+    ]
+  },
+  {
+    title: "Besitz illegaler Gegenstände",
+    date: "03.08.2026",
+    source: "Kontrolle im Dienst",
+    text: "Im Rahmen einer polizeilichen Maßnahme wurde festgestellt, dass der beschuldigte Beamte Gegenstände mit sich führte, deren Besitz nach den geltenden Vorschriften für ihn nicht zulässig war. Die Gegenstände befanden sich während der Kontrolle in seinem unmittelbaren Besitz und konnten sichergestellt werden. Nach derzeitigem Ermittlungsstand lag für das Mitführen der Gegenstände keine rechtliche oder dienstliche Berechtigung vor.",
+    violations: [
+      {code:"StGB", para:"3.20", law:"Besitz von illegalen Gegenständen"},
+      {code:"StGB", para:"4",    law:"Dienstvergehen"},
+      {code:"BDG",  para:"2",    law:"Pflichten der Beamten"},
+      {code:"BDG",  para:"12",   law:"Eid"},
+    ]
+  },
+];
+
+const CODES = ["StGB","BDG","StPO","StVO","Sonstige"];
+
+let current = 0;
+let session = { correct:0, total:0 };
+let order = shuffledIndices(CASES.length);
+let orderPos = 0;
+
+function shuffledIndices(n){
+  const a = Array.from({length:n}, (_,i)=>i);
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+const rowsBody = document.getElementById('rowsBody');
+const verdictZone = document.getElementById('verdictZone');
+
+function normPara(p){
+  return p.replace(/§/g,'').trim().toLowerCase();
+}
+
+function makeRow(){
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>
+      <select class="gb-select">
+        ${CODES.map(c=>`<option value="${c}">${c}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="text" class="para-input" placeholder="§x"></td>
+    <td><input type="text" class="law-input" placeholder="Bezeichnung (optional)"></td>
+    <td><button class="row-remove" title="Zeile entfernen" aria-label="Zeile entfernen">×</button></td>
+  `;
+  tr.querySelector('.row-remove').addEventListener('click', ()=>{
+    tr.remove();
+  });
+  return tr;
+}
+
+function resetRows(n=4){
+  rowsBody.innerHTML = '';
+  for(let i=0;i<n;i++) rowsBody.appendChild(makeRow());
+}
+
+document.getElementById('btnAddRow').addEventListener('click', ()=>{
+  rowsBody.appendChild(makeRow());
+});
+
+function loadCase(idx){
+  current = idx;
+  const c = CASES[idx];
+  document.getElementById('caseIndex').textContent = idx+1;
+  document.getElementById('caseTotal').textContent = CASES.length;
+  document.getElementById('caseLabel').textContent = `FALL ${idx+1}`;
+  document.getElementById('caseTitle').textContent = c.title;
+  document.getElementById('caseDate').textContent = c.date;
+  document.getElementById('caseSource').textContent = c.source;
+  document.getElementById('caseText').textContent = c.text;
+  document.getElementById('aktzPreview').textContent = `FIB-CO-EA-XX-${String(idx+1).padStart(3,'0')}`;
+  resetRows(Math.max(4, c.violations.length));
+  verdictZone.classList.remove('show');
+}
+
+document.getElementById('btnNext').addEventListener('click', ()=>{
+  orderPos = (orderPos+1) % order.length;
+  loadCase(order[orderPos]);
+});
+document.getElementById('btnPrev').addEventListener('click', ()=>{
+  orderPos = (orderPos-1+order.length) % order.length;
+  loadCase(order[orderPos]);
+});
+document.getElementById('btnRandom').addEventListener('click', ()=>{
+  let next = Math.floor(Math.random()*CASES.length);
+  if(CASES.length>1){ while(next===current){ next = Math.floor(Math.random()*CASES.length); } }
+  orderPos = order.indexOf(next);
+  loadCase(next);
+});
+
+function collectEntries(){
+  const rows = [...rowsBody.querySelectorAll('tr')];
+  return rows.map(r=>{
+    const code = r.querySelector('.gb-select').value;
+    const para = r.querySelector('.para-input').value;
+    return {code, para: para.trim()};
+  }).filter(e=>e.para.length>0);
+}
+
+function grade(){
+  const c = CASES[current];
+  const entries = collectEntries();
+  const required = c.violations.map(v=>({...v, matched:false}));
+  const results = { ok:[], extra:[] };
+
+  entries.forEach(e=>{
+    const hit = required.find(r=>!r.matched && r.code===e.code && normPara(r.para)===normPara(e.para));
+    if(hit){
+      hit.matched = true;
+      results.ok.push(hit);
+    } else {
+      results.extra.push(e);
+    }
+  });
+
+  const missing = required.filter(r=>!r.matched);
+  return {ok:results.ok, missing, extra:results.extra, requiredCount:required.length};
+}
+
+function renderVerdict(res){
+  const total = res.requiredCount;
+  const correct = res.ok.length;
+  session.correct += correct;
+  session.total += total;
+  document.getElementById('sessionScore').textContent = `${session.correct} / ${session.total}`;
+
+  const passed = res.missing.length===0 && res.extra.length===0;
+  const stamp = document.getElementById('stampEl');
+  stamp.className = 'stamp ' + (passed ? 'pass' : 'fail');
+  stamp.textContent = passed ? 'Akte vollständig' : 'Mängel festgestellt';
+  // restart animation
+  stamp.style.animation = 'none'; void stamp.offsetWidth; stamp.style.animation = null;
+
+  document.getElementById('scoreLine').textContent = `${correct} / ${total}`;
+
+  const box = document.getElementById('breakdown');
+  box.innerHTML = '';
+  res.ok.forEach(r=>{
+    box.innerHTML += `<div class="item ok"><span class="mark">✓</span><span><span class="code">${r.code} §${r.para}</span> — ${r.law}: korrekt erkannt.</span></div>`;
+  });
+  res.missing.forEach(r=>{
+    box.innerHTML += `<div class="item miss"><span class="mark">✗</span><span><span class="code">${r.code} §${r.para}</span> — ${r.law}: fehlt in deiner Anklage.</span></div>`;
+  });
+  res.extra.forEach(r=>{
+    box.innerHTML += `<div class="item extra"><span class="mark">?</span><span><span class="code">${r.code} §${r.para}</span>: nicht Teil dieses Falls — bitte gegenprüfen, ob der Paragraph wirklich einschlägig ist.</span></div>`;
+  });
+
+  document.getElementById('reviewBox').innerHTML =
+    `<b>Vollständige Musterlösung:</b><br>` +
+    CASES[current].violations.map(v=>`${v.code} §${v.para} — ${v.law}`).join('<br>');
+
+  verdictZone.classList.add('show');
+}
+
+document.getElementById('btnSubmit').addEventListener('click', ()=>{
+  const res = grade();
+  renderVerdict(res);
+});
+
+document.getElementById('btnReveal').addEventListener('click', ()=>{
+  const c = CASES[current];
+  document.getElementById('reviewBox').innerHTML =
+    `<b>Musterlösung:</b><br>` + c.violations.map(v=>`${v.code} §${v.para} — ${v.law}`).join('<br>');
+  document.getElementById('breakdown').innerHTML = '';
+  const stamp = document.getElementById('stampEl');
+  stamp.className = 'stamp fail';
+  stamp.textContent = 'Musterlösung eingesehen';
+  stamp.style.animation = 'none'; void stamp.offsetWidth; stamp.style.animation = null;
+  document.getElementById('scoreLine').textContent = `— (nicht gewertet)`;
+  verdictZone.classList.add('show');
+});
+
+// init
+loadCase(order[0]);
+</script>
+
+</body>
+</html>
